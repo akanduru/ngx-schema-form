@@ -1,6 +1,7 @@
 {
   "name": "ngx-schema-form",
   "version": "2.6.6",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/akanduru/ngx-schema-form"
@@ -13,7 +14,7 @@
   ],
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/guillotinaweb/ngx-schema-form/issues"
+    "url": "https://github.com/akanduru/ngx-schema-form/issues"
   },
   "contributors": [
     "Frank Bessou <fbessou@free.fr>",
