@@ -3,7 +3,7 @@
   "version": "2.6.6",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/guillotinaweb/ngx-schema-form"
+    "url": "git+https://github.com/akanduru/ngx-schema-form"
   },
   "keywords": [
     "angular",
