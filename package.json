@@ -55,5 +55,6 @@
   },
   "files": [
     "dist/*"
-  ]
+  ],
+  "main": "dist/schema-form/ngx-schema-form.d.ts"
 }
