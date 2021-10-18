@@ -56,11 +56,6 @@
   "files": [
     "dist/*"
   ],
-  "main": "dist/schema-form/bundles/ngx-schema-form.umd.js",
-  "module": "dist/schema-form/fesm2015/ngx-schema-form.js",
-  "es2015": "dist/schema-form/fesm2015/ngx-schema-form.js",
-  "esm2015": "dist/schema-form/esm2015/ngx-schema-form.js",
-  "fesm2015": "dist/schema-form/fesm2015/ngx-schema-form.js",
   "typings": "dist/schema-form/ngx-schema-form.d.ts",
   "metadata": "dist/schema-form/ngx-schema-form.metadata.json"
 }
