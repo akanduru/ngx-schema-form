@@ -52,5 +52,15 @@
     "ts-node": "~7.0.1",
     "tslint": "~6.1.0",
     "typescript": "~4.0.5"
-  }
+  },
+  "files": [
+    "dist/*"
+  ],
+  "main": "bundles/ngx-schema-form.umd.js",
+  "module": "fesm2015/ngx-schema-form.js",
+  "es2015": "fesm2015/ngx-schema-form.js",
+  "esm2015": "esm2015/ngx-schema-form.js",
+  "fesm2015": "fesm2015/ngx-schema-form.js",
+  "typings": "ngx-schema-form.d.ts",
+  "metadata": "ngx-schema-form.metadata.json"
 }
