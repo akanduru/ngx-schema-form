@@ -55,8 +55,5 @@
   },
   "files": [
     "dist/*"
-  ],
-  "main": "dist/schema-form/bundles/ngx-schema-form.umd.js",
-  "typings": "dist/schema-form/ngx-schema-form.d.ts",
-  "metadata": "dist/schema-form/ngx-schema-form.metadata.json"
+  ]
 }
