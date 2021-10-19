@@ -205,10 +205,10 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
       // FIX - Ajay: Avoid overwriting the model,
       // and keep model reference unchanged.
 
-      // Object.assign(this.model, value);
-      const combined = {};
-      Object.assign(combined, value, this.model);
-      Object.assign(this.model, combined);
+      Object.assign(this.model, value);
+      // const combined = {};
+      // Object.assign(combined, value, this.model);
+      // Object.assign(this.model, combined);
     } else {
       this.model = value;
     }
