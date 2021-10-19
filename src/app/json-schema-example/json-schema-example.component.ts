@@ -244,11 +244,20 @@ export class JsonSchemaExampleComponent implements OnInit, OnDestroy {
     this.value = value;
   }
 
+  /**
+   * Select model by index of this.models
+   * @param modelNum
+   */
   selectModel(modelNum) {
     this.modelId = modelNum;
+    // Clone model object and leave the original untouched.
     this.model = this.createModel(modelNum);
   }
 
+  /**
+   * Clone desired model
+   * @param modelNum
+   */
   createModel(modelNum) {
     return JSON.parse(JSON.stringify(this.models[modelNum]));
   }
