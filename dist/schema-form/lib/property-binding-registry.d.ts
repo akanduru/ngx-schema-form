@@ -1,13 +1,10 @@
 /**
  * General purpose propery binding registry
  */
-import * as ɵngcc0 from '@angular/core';
 export declare class PropertyBindingRegistry {
     private bindings;
     getPropertyBindings(type: PropertyBindingTypes): PropertyBindings;
     getPropertyBindingsVisibility(): PropertyBindings;
-    static ɵfac: ɵngcc0.ɵɵFactoryDef<PropertyBindingRegistry, never>;
-    static ɵprov: ɵngcc0.ɵɵInjectableDef<PropertyBindingRegistry>;
 }
 /**
  * Defines the types of supported property bindings.<br/>
@@ -80,5 +77,3 @@ export interface IndexerResult {
         value: any;
     }[];
 }
-
-//# sourceMappingURL=property-binding-registry.d.ts.map

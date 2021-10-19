@@ -1,16 +1,15 @@
 import { ChangeDetectorRef, OnChanges, EventEmitter, SimpleChanges } from '@angular/core';
 import { ControlValueAccessor } from '@angular/forms';
-import { Action } from './model/action';
-import { ActionRegistry } from './model/actionregistry';
-import { FormProperty } from './model/formproperty';
-import { FormPropertyFactory } from './model/formpropertyfactory';
-import { ValidatorRegistry } from './model/validatorregistry';
-import { Validator } from './model/validator';
-import { Binding } from './model/binding';
-import { BindingRegistry } from './model/bindingregistry';
+import { Action } from './model';
+import { ActionRegistry } from './model';
+import { FormProperty } from './model';
+import { FormPropertyFactory } from './model';
+import { ValidatorRegistry } from './model';
+import { Validator } from './model';
+import { Binding } from './model';
+import { BindingRegistry } from './model';
 import { TerminatorService } from './terminator.service';
-import { ISchema } from './model/ISchema';
-import * as ɵngcc0 from '@angular/core';
+import { ISchema } from './model';
 export declare function useFactory(schemaValidatorFactory: any, validatorRegistry: any, propertyBindingRegistry: any, expressionCompilerFactory: any, logService: any): FormPropertyFactory;
 export declare class FormComponent implements OnChanges, ControlValueAccessor {
     private formPropertyFactory;
@@ -54,8 +53,4 @@ export declare class FormComponent implements OnChanges, ControlValueAccessor {
     reset(): void;
     private setModel;
     private onValueChanges;
-    static ɵfac: ɵngcc0.ɵɵFactoryDef<FormComponent, never>;
-    static ɵcmp: ɵngcc0.ɵɵComponentDefWithMeta<FormComponent, "sf-form", never, { "schema": "schema"; "actions": "actions"; "validators": "validators"; "bindings": "bindings"; "model": "model"; }, { "onChange": "onChange"; "modelChange": "modelChange"; "isValid": "isValid"; "onErrorChange": "onErrorChange"; "onErrorsChange": "onErrorsChange"; }, never, never>;
 }
-
-//# sourceMappingURL=form.component.d.ts.map

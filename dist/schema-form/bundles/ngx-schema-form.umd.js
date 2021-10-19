@@ -27,6 +27,25 @@
         { type: core.Injectable }
     ];
 
+    var BindingRegistry = /** @class */ (function () {
+        function BindingRegistry() {
+            this.bindings = [];
+        }
+        BindingRegistry.prototype.clear = function () {
+            this.bindings = [];
+        };
+        BindingRegistry.prototype.register = function (path, binding) {
+            this.bindings[path] = [].concat(binding);
+        };
+        BindingRegistry.prototype.get = function (path) {
+            return this.bindings[path];
+        };
+        return BindingRegistry;
+    }());
+    BindingRegistry.decorators = [
+        { type: core.Injectable }
+    ];
+
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation.
 
@@ -1266,6 +1285,272 @@
         return FormPropertyFactory;
     }());
 
+    var AtomicProperty = /** @class */ (function (_super) {
+        __extends(AtomicProperty, _super);
+        function AtomicProperty() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        AtomicProperty.prototype.setValue = function (value, onlySelf) {
+            if (onlySelf === void 0) { onlySelf = false; }
+            this._value = value;
+            this.updateValueAndValidity(onlySelf, true);
+        };
+        AtomicProperty.prototype.reset = function (value, onlySelf) {
+            if (value === void 0) { value = null; }
+            if (onlySelf === void 0) { onlySelf = true; }
+            this.resetValue(value);
+            this.updateValueAndValidity(onlySelf, true);
+        };
+        AtomicProperty.prototype.resetValue = function (value) {
+            if (value === null) {
+                if (this.schema.default !== undefined) {
+                    value = this.schema.default;
+                }
+                else {
+                    value = this.fallbackValue();
+                }
+            }
+            this._value = value;
+        };
+        AtomicProperty.prototype._hasValue = function () {
+            return this.fallbackValue() !== this.value;
+        };
+        AtomicProperty.prototype._updateValue = function () {
+        };
+        return AtomicProperty;
+    }(FormProperty));
+
+    var ObjectProperty = /** @class */ (function (_super) {
+        __extends(ObjectProperty, _super);
+        function ObjectProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+            var _this = _super.call(this, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) || this;
+            _this.formPropertyFactory = formPropertyFactory;
+            _this.propertiesId = [];
+            _this.createProperties();
+            return _this;
+        }
+        ObjectProperty.prototype.setValue = function (value, onlySelf) {
+            for (var propertyId in value) {
+                if (value.hasOwnProperty(propertyId)) {
+                    this.properties[propertyId].setValue(value[propertyId], true);
+                }
+            }
+            this.updateValueAndValidity(onlySelf, true);
+        };
+        ObjectProperty.prototype.reset = function (value, onlySelf) {
+            if (onlySelf === void 0) { onlySelf = true; }
+            value = value || this.schema.default || {};
+            this.resetProperties(value);
+            this.updateValueAndValidity(onlySelf, true);
+        };
+        ObjectProperty.prototype.resetProperties = function (value) {
+            for (var propertyId in this.schema.properties) {
+                if (this.schema.properties.hasOwnProperty(propertyId)) {
+                    this.properties[propertyId].reset(value[propertyId], true);
+                }
+            }
+        };
+        ObjectProperty.prototype.createProperties = function () {
+            this.properties = {};
+            this.propertiesId = [];
+            for (var propertyId in this.schema.properties) {
+                if (this.schema.properties.hasOwnProperty(propertyId)) {
+                    var propertySchema = this.schema.properties[propertyId];
+                    this.properties[propertyId] = this.formPropertyFactory.createProperty(propertySchema, this, propertyId);
+                    this.propertiesId.push(propertyId);
+                }
+            }
+        };
+        ObjectProperty.prototype._hasValue = function () {
+            return !!Object.keys(this.value).length;
+        };
+        ObjectProperty.prototype._updateValue = function () {
+            this.reduceValue();
+        };
+        ObjectProperty.prototype._runValidation = function () {
+            var _this = this;
+            _super.prototype._runValidation.call(this);
+            if (this._errors) {
+                this._errors.forEach(function (error) {
+                    var prop = _this.searchProperty(error.path.slice(1));
+                    if (prop) {
+                        prop.extendErrors(error);
+                    }
+                });
+            }
+        };
+        ObjectProperty.prototype.reduceValue = function () {
+            var value = {};
+            this.forEachChild(function (property, propertyId) {
+                if (property.visible && property._hasValue()) {
+                    value[propertyId] = property.value;
+                }
+            });
+            this._value = value;
+        };
+        return ObjectProperty;
+    }(PropertyGroup));
+    PROPERTY_TYPE_MAPPING.object = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) {
+        return new ObjectProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+    };
+
+    var ArrayProperty = /** @class */ (function (_super) {
+        __extends(ArrayProperty, _super);
+        function ArrayProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+            var _this = _super.call(this, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) || this;
+            _this.formPropertyFactory = formPropertyFactory;
+            return _this;
+        }
+        ArrayProperty.prototype.addItem = function (value) {
+            if (value === void 0) { value = null; }
+            var newProperty = this.addProperty();
+            newProperty.reset(value, false);
+            return newProperty;
+        };
+        ArrayProperty.prototype.addProperty = function () {
+            var itemSchema = this.schema.items;
+            if (Array.isArray(this.schema.items)) {
+                var itemSchemas = this.schema.items;
+                if (itemSchemas.length > this.properties.length) {
+                    itemSchema = itemSchema[this.properties.length];
+                }
+                else if (this.schema.additionalItems) {
+                    itemSchema = this.schema.additionalItems;
+                }
+                else {
+                    // souldn't add new items since schema is undefined for the item at its position
+                    return null;
+                }
+            }
+            var newProperty = this.formPropertyFactory.createProperty(itemSchema, this);
+            this.properties.push(newProperty);
+            return newProperty;
+        };
+        ArrayProperty.prototype.removeItem = function (item) {
+            this.properties = this.properties.filter(function (i) { return i !== item; });
+            this.updateValueAndValidity(false, true);
+        };
+        ArrayProperty.prototype.setValue = function (value, onlySelf) {
+            this.createProperties();
+            this.resetProperties(value);
+            this.updateValueAndValidity(onlySelf, true);
+        };
+        ArrayProperty.prototype._hasValue = function () {
+            return true;
+        };
+        ArrayProperty.prototype._updateValue = function () {
+            this.reduceValue();
+        };
+        ArrayProperty.prototype.reduceValue = function () {
+            var value = [];
+            this.forEachChild(function (property, _) {
+                if (property.visible && property._hasValue()) {
+                    value.push(property.value);
+                }
+            });
+            this._value = value;
+        };
+        ArrayProperty.prototype.reset = function (value, onlySelf) {
+            if (onlySelf === void 0) { onlySelf = true; }
+            value = value || this.schema.default || [];
+            this.properties = [];
+            this.resetProperties(value);
+            this.updateValueAndValidity(onlySelf, true);
+        };
+        ArrayProperty.prototype.createProperties = function () {
+            this.properties = [];
+        };
+        ArrayProperty.prototype.resetProperties = function (value) {
+            for (var idx in value) {
+                if (value.hasOwnProperty(idx)) {
+                    var property = this.addProperty();
+                    property.reset(value[idx], true);
+                }
+            }
+        };
+        return ArrayProperty;
+    }(PropertyGroup));
+    PROPERTY_TYPE_MAPPING.array = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) {
+        return new ArrayProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+    };
+
+    var StringProperty = /** @class */ (function (_super) {
+        __extends(StringProperty, _super);
+        function StringProperty() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        StringProperty.prototype.fallbackValue = function () {
+            return '';
+        };
+        return StringProperty;
+    }(AtomicProperty));
+    PROPERTY_TYPE_MAPPING.string = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+        return new StringProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+    };
+
+    var BooleanProperty = /** @class */ (function (_super) {
+        __extends(BooleanProperty, _super);
+        function BooleanProperty() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        BooleanProperty.prototype.fallbackValue = function () {
+            return null;
+        };
+        return BooleanProperty;
+    }(AtomicProperty));
+    PROPERTY_TYPE_MAPPING.boolean = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+        return new BooleanProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+    };
+
+    var NumberProperty = /** @class */ (function (_super) {
+        __extends(NumberProperty, _super);
+        function NumberProperty() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        NumberProperty.prototype.fallbackValue = function () {
+            return null;
+        };
+        NumberProperty.prototype.setValue = function (value, onlySelf) {
+            if (onlySelf === void 0) { onlySelf = false; }
+            if (typeof value === 'string') {
+                if (value.length) {
+                    value = value.indexOf('.') > -1 ? parseFloat(value) : parseInt(value, 10);
+                }
+                else {
+                    value = null;
+                }
+            }
+            this._value = value;
+            this.updateValueAndValidity(onlySelf, true);
+        };
+        return NumberProperty;
+    }(AtomicProperty));
+    PROPERTY_TYPE_MAPPING.integer = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+        return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+    };
+    PROPERTY_TYPE_MAPPING.number = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+        return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+    };
+
+    var ValidatorRegistry = /** @class */ (function () {
+        function ValidatorRegistry() {
+            this.validators = [];
+        }
+        ValidatorRegistry.prototype.register = function (path, validator) {
+            this.validators[path] = validator;
+        };
+        ValidatorRegistry.prototype.get = function (path) {
+            return this.validators[path];
+        };
+        ValidatorRegistry.prototype.clear = function () {
+            this.validators = [];
+        };
+        return ValidatorRegistry;
+    }());
+    ValidatorRegistry.decorators = [
+        { type: core.Injectable }
+    ];
+
     function isPresent(o) {
         return o !== null && o !== undefined;
     }
@@ -1493,44 +1778,6 @@
         return SchemaPreprocessor;
     }());
     SchemaPreprocessor.decorators = [
-        { type: core.Injectable }
-    ];
-
-    var ValidatorRegistry = /** @class */ (function () {
-        function ValidatorRegistry() {
-            this.validators = [];
-        }
-        ValidatorRegistry.prototype.register = function (path, validator) {
-            this.validators[path] = validator;
-        };
-        ValidatorRegistry.prototype.get = function (path) {
-            return this.validators[path];
-        };
-        ValidatorRegistry.prototype.clear = function () {
-            this.validators = [];
-        };
-        return ValidatorRegistry;
-    }());
-    ValidatorRegistry.decorators = [
-        { type: core.Injectable }
-    ];
-
-    var BindingRegistry = /** @class */ (function () {
-        function BindingRegistry() {
-            this.bindings = [];
-        }
-        BindingRegistry.prototype.clear = function () {
-            this.bindings = [];
-        };
-        BindingRegistry.prototype.register = function (path, binding) {
-            this.bindings[path] = [].concat(binding);
-        };
-        BindingRegistry.prototype.get = function (path) {
-            return this.bindings[path];
-        };
-        return BindingRegistry;
-    }());
-    BindingRegistry.decorators = [
         { type: core.Injectable }
     ];
 
@@ -1968,10 +2215,13 @@
             this.actions = {};
             this.validators = {};
             this.bindings = {};
+            // tslint:disable-next-line:no-output-on-prefix
             this.onChange = new core.EventEmitter();
             this.modelChange = new core.EventEmitter();
             this.isValid = new core.EventEmitter();
+            // tslint:disable-next-line:no-output-on-prefix
             this.onErrorChange = new core.EventEmitter();
+            // tslint:disable-next-line:no-output-on-prefix
             this.onErrorsChange = new core.EventEmitter();
             this.rootProperty = null;
         }
@@ -2012,7 +2262,7 @@
                 SchemaPreprocessor.preprocess(this.schema);
                 this.rootProperty = this.formPropertyFactory.createProperty(this.schema);
                 if (this.model) {
-                    // this.rootProperty.reset(this.model, false);
+                    this.rootProperty.reset(this.model, false);
                 }
                 this.rootProperty.valueChanges.subscribe(this.onValueChanges.bind(this));
                 this.rootProperty.errorsChanges.subscribe(function (value) {
@@ -2020,10 +2270,10 @@
                     _this.isValid.emit(!(value && value.length));
                 });
             }
-            if (this.schema && (changes.model || changes.schema)) {
+            else if (this.schema && changes.model) {
                 this.rootProperty.reset(this.model, false);
-                this.cdr.detectChanges();
             }
+            this.cdr.detectChanges();
         };
         FormComponent.prototype.setValidators = function () {
             this.validatorRegistry.clear();
@@ -2060,7 +2310,10 @@
         };
         FormComponent.prototype.setModel = function (value) {
             if (this.model) {
-                Object.assign(this.model, value);
+                // Object.assign(this.model, value);
+                var combined = {};
+                Object.assign(combined, value, this.model);
+                Object.assign(this.model, combined);
             }
             else {
                 this.model = value;
@@ -2076,6 +2329,7 @@
                 if (!this.onChangeCallback) {
                     this.setModel(value);
                 }
+                this.modelChange.emit(value);
             }
             this.onChange.emit({ value: value });
         };
@@ -2317,7 +2571,9 @@
             this.cdr.detectChanges();
         };
         WidgetChooserComponent.prototype.ngOnDestroy = function () {
-            this.subs.unsubscribe();
+            if (this.subs) {
+                this.subs.unsubscribe();
+            }
         };
         return WidgetChooserComponent;
     }());
@@ -2336,253 +2592,6 @@
         widgetInfo: [{ type: core.Input }],
         widgetInstanciated: [{ type: core.Output }],
         container: [{ type: core.ViewChild, args: ['target', { read: core.ViewContainerRef, static: true },] }]
-    };
-
-    var AtomicProperty = /** @class */ (function (_super) {
-        __extends(AtomicProperty, _super);
-        function AtomicProperty() {
-            return _super !== null && _super.apply(this, arguments) || this;
-        }
-        AtomicProperty.prototype.setValue = function (value, onlySelf) {
-            if (onlySelf === void 0) { onlySelf = false; }
-            this._value = value;
-            this.updateValueAndValidity(onlySelf, true);
-        };
-        AtomicProperty.prototype.reset = function (value, onlySelf) {
-            if (value === void 0) { value = null; }
-            if (onlySelf === void 0) { onlySelf = true; }
-            this.resetValue(value);
-            this.updateValueAndValidity(onlySelf, true);
-        };
-        AtomicProperty.prototype.resetValue = function (value) {
-            if (value === null) {
-                if (this.schema.default !== undefined) {
-                    value = this.schema.default;
-                }
-                else {
-                    value = this.fallbackValue();
-                }
-            }
-            this._value = value;
-        };
-        AtomicProperty.prototype._hasValue = function () {
-            return this.fallbackValue() !== this.value;
-        };
-        AtomicProperty.prototype._updateValue = function () {
-        };
-        return AtomicProperty;
-    }(FormProperty));
-
-    var ObjectProperty = /** @class */ (function (_super) {
-        __extends(ObjectProperty, _super);
-        function ObjectProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-            var _this = _super.call(this, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) || this;
-            _this.formPropertyFactory = formPropertyFactory;
-            _this.propertiesId = [];
-            _this.createProperties();
-            return _this;
-        }
-        ObjectProperty.prototype.setValue = function (value, onlySelf) {
-            for (var propertyId in value) {
-                if (value.hasOwnProperty(propertyId)) {
-                    this.properties[propertyId].setValue(value[propertyId], true);
-                }
-            }
-            this.updateValueAndValidity(onlySelf, true);
-        };
-        ObjectProperty.prototype.reset = function (value, onlySelf) {
-            if (onlySelf === void 0) { onlySelf = true; }
-            value = value || this.schema.default || {};
-            this.resetProperties(value);
-            this.updateValueAndValidity(onlySelf, true);
-        };
-        ObjectProperty.prototype.resetProperties = function (value) {
-            for (var propertyId in this.schema.properties) {
-                if (this.schema.properties.hasOwnProperty(propertyId)) {
-                    this.properties[propertyId].reset(value[propertyId], true);
-                }
-            }
-        };
-        ObjectProperty.prototype.createProperties = function () {
-            this.properties = {};
-            this.propertiesId = [];
-            for (var propertyId in this.schema.properties) {
-                if (this.schema.properties.hasOwnProperty(propertyId)) {
-                    var propertySchema = this.schema.properties[propertyId];
-                    this.properties[propertyId] = this.formPropertyFactory.createProperty(propertySchema, this, propertyId);
-                    this.propertiesId.push(propertyId);
-                }
-            }
-        };
-        ObjectProperty.prototype._hasValue = function () {
-            return !!Object.keys(this.value).length;
-        };
-        ObjectProperty.prototype._updateValue = function () {
-            this.reduceValue();
-        };
-        ObjectProperty.prototype._runValidation = function () {
-            var _this = this;
-            _super.prototype._runValidation.call(this);
-            if (this._errors) {
-                this._errors.forEach(function (error) {
-                    var prop = _this.searchProperty(error.path.slice(1));
-                    if (prop) {
-                        prop.extendErrors(error);
-                    }
-                });
-            }
-        };
-        ObjectProperty.prototype.reduceValue = function () {
-            var value = {};
-            this.forEachChild(function (property, propertyId) {
-                if (property.visible && property._hasValue()) {
-                    value[propertyId] = property.value;
-                }
-            });
-            this._value = value;
-        };
-        return ObjectProperty;
-    }(PropertyGroup));
-    PROPERTY_TYPE_MAPPING.object = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) {
-        return new ObjectProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-    };
-
-    var ArrayProperty = /** @class */ (function (_super) {
-        __extends(ArrayProperty, _super);
-        function ArrayProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-            var _this = _super.call(this, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) || this;
-            _this.formPropertyFactory = formPropertyFactory;
-            return _this;
-        }
-        ArrayProperty.prototype.addItem = function (value) {
-            if (value === void 0) { value = null; }
-            var newProperty = this.addProperty();
-            newProperty.reset(value, false);
-            return newProperty;
-        };
-        ArrayProperty.prototype.addProperty = function () {
-            var itemSchema = this.schema.items;
-            if (Array.isArray(this.schema.items)) {
-                var itemSchemas = this.schema.items;
-                if (itemSchemas.length > this.properties.length) {
-                    itemSchema = itemSchema[this.properties.length];
-                }
-                else if (this.schema.additionalItems) {
-                    itemSchema = this.schema.additionalItems;
-                }
-                else {
-                    // souldn't add new items since schema is undefined for the item at its position
-                    return null;
-                }
-            }
-            var newProperty = this.formPropertyFactory.createProperty(itemSchema, this);
-            this.properties.push(newProperty);
-            return newProperty;
-        };
-        ArrayProperty.prototype.removeItem = function (item) {
-            this.properties = this.properties.filter(function (i) { return i !== item; });
-            this.updateValueAndValidity(false, true);
-        };
-        ArrayProperty.prototype.setValue = function (value, onlySelf) {
-            this.createProperties();
-            this.resetProperties(value);
-            this.updateValueAndValidity(onlySelf, true);
-        };
-        ArrayProperty.prototype._hasValue = function () {
-            return true;
-        };
-        ArrayProperty.prototype._updateValue = function () {
-            this.reduceValue();
-        };
-        ArrayProperty.prototype.reduceValue = function () {
-            var value = [];
-            this.forEachChild(function (property, _) {
-                if (property.visible && property._hasValue()) {
-                    value.push(property.value);
-                }
-            });
-            this._value = value;
-        };
-        ArrayProperty.prototype.reset = function (value, onlySelf) {
-            if (onlySelf === void 0) { onlySelf = true; }
-            value = value || this.schema.default || [];
-            this.properties = [];
-            this.resetProperties(value);
-            this.updateValueAndValidity(onlySelf, true);
-        };
-        ArrayProperty.prototype.createProperties = function () {
-            this.properties = [];
-        };
-        ArrayProperty.prototype.resetProperties = function (value) {
-            for (var idx in value) {
-                if (value.hasOwnProperty(idx)) {
-                    var property = this.addProperty();
-                    property.reset(value[idx], true);
-                }
-            }
-        };
-        return ArrayProperty;
-    }(PropertyGroup));
-    PROPERTY_TYPE_MAPPING.array = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) {
-        return new ArrayProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-    };
-
-    var StringProperty = /** @class */ (function (_super) {
-        __extends(StringProperty, _super);
-        function StringProperty() {
-            return _super !== null && _super.apply(this, arguments) || this;
-        }
-        StringProperty.prototype.fallbackValue = function () {
-            return '';
-        };
-        return StringProperty;
-    }(AtomicProperty));
-    PROPERTY_TYPE_MAPPING.string = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-        return new StringProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-    };
-
-    var BooleanProperty = /** @class */ (function (_super) {
-        __extends(BooleanProperty, _super);
-        function BooleanProperty() {
-            return _super !== null && _super.apply(this, arguments) || this;
-        }
-        BooleanProperty.prototype.fallbackValue = function () {
-            return null;
-        };
-        return BooleanProperty;
-    }(AtomicProperty));
-    PROPERTY_TYPE_MAPPING.boolean = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-        return new BooleanProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-    };
-
-    var NumberProperty = /** @class */ (function (_super) {
-        __extends(NumberProperty, _super);
-        function NumberProperty() {
-            return _super !== null && _super.apply(this, arguments) || this;
-        }
-        NumberProperty.prototype.fallbackValue = function () {
-            return null;
-        };
-        NumberProperty.prototype.setValue = function (value, onlySelf) {
-            if (onlySelf === void 0) { onlySelf = false; }
-            if (typeof value === 'string') {
-                if (value.length) {
-                    value = value.indexOf('.') > -1 ? parseFloat(value) : parseInt(value, 10);
-                }
-                else {
-                    value = null;
-                }
-            }
-            this._value = value;
-            this.updateValueAndValidity(onlySelf, true);
-        };
-        return NumberProperty;
-    }(AtomicProperty));
-    PROPERTY_TYPE_MAPPING.integer = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-        return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-    };
-    PROPERTY_TYPE_MAPPING.number = function (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-        return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
     };
 
     var Widget = /** @class */ (function () {
@@ -2728,6 +2737,7 @@
                 },] }
     ];
 
+    // tslint:disable-next-line:component-class-suffix
     var CheckboxWidget = /** @class */ (function (_super) {
         __extends(CheckboxWidget, _super);
         function CheckboxWidget() {
@@ -2740,6 +2750,7 @@
             var control = this.control;
             this.formProperty.valueChanges.subscribe(function (newValue) {
                 if (control.value !== newValue) {
+                    _this.checked = {};
                     control.setValue(newValue, { emitEvent: false });
                     if (newValue && Array.isArray(newValue)) {
                         newValue.map(function (v) { return _this.checked[v] = true; });
@@ -2767,7 +2778,7 @@
     CheckboxWidget.decorators = [
         { type: core.Component, args: [{
                     selector: 'sf-checkbox-widget',
-                    template: "<div class=\"widget form-group\">\n    <label [attr.for]=\"id\" class=\"horizontal control-label\">\n        {{ schema.title }}\n    </label>\n\t<div *ngIf=\"schema.type!='array'\" class=\"checkbox\">\n\t\t<label class=\"horizontal control-label\">\n\t\t\t<input [formControl]=\"control\" [attr.name]=\"name\" [attr.id]=\"id\" [indeterminate]=\"control.value !== false && control.value !== true ? true :null\" type=\"checkbox\" [disabled]=\"schema.readOnly\">\n\t\t\t<input *ngIf=\"schema.readOnly\" [attr.name]=\"name\" type=\"hidden\" [formControl]=\"control\">\n\t\t\t{{schema.description}}\n\t\t</label>\n\t</div>\n\t<ng-container *ngIf=\"schema.type==='array'\">\n\t\t<div *ngFor=\"let option of schema.items.oneOf\" class=\"checkbox\">\n\t\t\t<label class=\"horizontal control-label\">\n\t\t\t\t<input [attr.name]=\"name\"\n\t\t\t\t\tvalue=\"{{option.enum[0]}}\" type=\"checkbox\" \n\t\t\t\t\t[attr.disabled]=\"schema.readOnly\"\n\t\t\t\t\t(change)=\"onCheck($event.target)\"\n\t\t\t\t\t[attr.checked]=\"checked[option.enum[0]] ? true : null\"\n\t\t\t\t\t[attr.id]=\"id + '.' + option.enum[0]\"\n\t\t\t\t\t>\n\t\t\t\t{{option.description}}\n\t\t\t</label>\n\t\t</div>\n\t</ng-container>\n</div>"
+                    template: "<div class=\"widget form-group\">\n    <label [attr.for]=\"id\" class=\"horizontal control-label\">\n        {{ schema.title }}\n    </label>\n\t<div *ngIf=\"schema.type!='array'\" class=\"checkbox\">\n\t\t<label class=\"horizontal control-label\">\n\t\t\t<input [formControl]=\"control\" [attr.name]=\"name\" [attr.id]=\"id\" [indeterminate]=\"control.value !== false && control.value !== true ? true :null\" type=\"checkbox\" [disabled]=\"schema.readOnly\">\n\t\t\t<input *ngIf=\"schema.readOnly\" [attr.name]=\"name\" type=\"hidden\" [formControl]=\"control\">\n\t\t\t{{schema.description}}\n\t\t</label>\n\t</div>\n\t<ng-container *ngIf=\"schema.type==='array'\">\n\t\t<div *ngFor=\"let option of schema.items.oneOf\" class=\"checkbox\">\n\t\t\t<label class=\"horizontal control-label\">\n\t\t\t\t<input [attr.name]=\"name\"\n\t\t\t\t\tvalue=\"{{option.enum[0]}}\" type=\"checkbox\"\n\t\t\t\t\t[attr.disabled]=\"schema.readOnly\"\n\t\t\t\t\t(change)=\"onCheck($event.target)\"\n\t\t\t\t\t[attr.checked]=\"checked[option.enum[0]] ? true : null\"\n\t\t\t\t\t[attr.id]=\"id + '.' + option.enum[0]\"\n\t\t\t\t\t>\n\t\t\t\t{{option.description}}\n\t\t\t</label>\n\t\t</div>\n\t</ng-container>\n</div>"
                 },] }
     ];
 
@@ -3549,20 +3560,18 @@
     exports.ZSchemaValidatorFactory = ZSchemaValidatorFactory;
     exports.ɵa = useFactory;
     exports.ɵb = DefaultLogService;
-    exports.ɵc = ActionRegistry;
-    exports.ɵd = ValidatorRegistry;
-    exports.ɵe = PropertyBindingRegistry;
-    exports.ɵf = BindingRegistry;
-    exports.ɵg = SchemaPreprocessor;
-    exports.ɵh = FormPropertyFactory;
-    exports.ɵi = DefaultWidget;
-    exports.ɵj = TemplateSchemaDirective;
-    exports.ɵk = FieldParent;
-    exports.ɵl = TemplateSchemaElement;
-    exports.ɵm = TemplateSchemaService;
-    exports.ɵn = FieldComponent;
-    exports.ɵo = ItemComponent;
-    exports.ɵp = ButtonComponent;
+    exports.ɵc = PropertyBindingRegistry;
+    exports.ɵd = ActionRegistry;
+    exports.ɵe = BindingRegistry;
+    exports.ɵf = DefaultWidget;
+    exports.ɵg = TemplateSchemaDirective;
+    exports.ɵh = FieldParent;
+    exports.ɵi = TemplateSchemaElement;
+    exports.ɵj = TemplateSchemaService;
+    exports.ɵk = FieldComponent;
+    exports.ɵl = ItemComponent;
+    exports.ɵm = ButtonComponent;
+    exports.ɵn = ValidatorRegistry;
 
     Object.defineProperty(exports, '__esModule', { value: true });
 

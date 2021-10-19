@@ -1,5 +1,4 @@
 import { ISchema } from './model/ISchema';
-import * as ɵngcc0 from '@angular/core';
 export declare abstract class SchemaValidatorFactory {
     abstract createValidatorFn(schema: any): (value: any) => any;
     abstract getSchema(schema: any, ref: any): any;
@@ -32,8 +31,4 @@ export declare class ZSchemaValidatorFactory extends SchemaValidatorFactory {
     getSchema(schema: any, ref: string): any;
     private denormalizeRequiredPropertyPaths;
     private getDefinition;
-    static ɵfac: ɵngcc0.ɵɵFactoryDef<ZSchemaValidatorFactory, never>;
-    static ɵprov: ɵngcc0.ɵɵInjectableDef<ZSchemaValidatorFactory>;
 }
-
-//# sourceMappingURL=schemavalidatorfactory.d.ts.map

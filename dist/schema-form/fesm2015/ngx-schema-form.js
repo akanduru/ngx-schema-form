@@ -24,6 +24,24 @@ ActionRegistry.decorators = [
     { type: Injectable }
 ];
 
+class BindingRegistry {
+    constructor() {
+        this.bindings = [];
+    }
+    clear() {
+        this.bindings = [];
+    }
+    register(path, binding) {
+        this.bindings[path] = [].concat(binding);
+    }
+    get(path) {
+        return this.bindings[path];
+    }
+}
+BindingRegistry.decorators = [
+    { type: Injectable }
+];
+
 class FormProperty {
     constructor(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
         this.validatorRegistry = validatorRegistry;
@@ -710,6 +728,237 @@ class FormPropertyFactory {
     }
 }
 
+class AtomicProperty extends FormProperty {
+    setValue(value, onlySelf = false) {
+        this._value = value;
+        this.updateValueAndValidity(onlySelf, true);
+    }
+    reset(value = null, onlySelf = true) {
+        this.resetValue(value);
+        this.updateValueAndValidity(onlySelf, true);
+    }
+    resetValue(value) {
+        if (value === null) {
+            if (this.schema.default !== undefined) {
+                value = this.schema.default;
+            }
+            else {
+                value = this.fallbackValue();
+            }
+        }
+        this._value = value;
+    }
+    _hasValue() {
+        return this.fallbackValue() !== this.value;
+    }
+    _updateValue() {
+    }
+}
+
+class ObjectProperty extends PropertyGroup {
+    constructor(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+        super(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+        this.formPropertyFactory = formPropertyFactory;
+        this.propertiesId = [];
+        this.createProperties();
+    }
+    setValue(value, onlySelf) {
+        for (const propertyId in value) {
+            if (value.hasOwnProperty(propertyId)) {
+                this.properties[propertyId].setValue(value[propertyId], true);
+            }
+        }
+        this.updateValueAndValidity(onlySelf, true);
+    }
+    reset(value, onlySelf = true) {
+        value = value || this.schema.default || {};
+        this.resetProperties(value);
+        this.updateValueAndValidity(onlySelf, true);
+    }
+    resetProperties(value) {
+        for (const propertyId in this.schema.properties) {
+            if (this.schema.properties.hasOwnProperty(propertyId)) {
+                this.properties[propertyId].reset(value[propertyId], true);
+            }
+        }
+    }
+    createProperties() {
+        this.properties = {};
+        this.propertiesId = [];
+        for (const propertyId in this.schema.properties) {
+            if (this.schema.properties.hasOwnProperty(propertyId)) {
+                const propertySchema = this.schema.properties[propertyId];
+                this.properties[propertyId] = this.formPropertyFactory.createProperty(propertySchema, this, propertyId);
+                this.propertiesId.push(propertyId);
+            }
+        }
+    }
+    _hasValue() {
+        return !!Object.keys(this.value).length;
+    }
+    _updateValue() {
+        this.reduceValue();
+    }
+    _runValidation() {
+        super._runValidation();
+        if (this._errors) {
+            this._errors.forEach(error => {
+                const prop = this.searchProperty(error.path.slice(1));
+                if (prop) {
+                    prop.extendErrors(error);
+                }
+            });
+        }
+    }
+    reduceValue() {
+        const value = {};
+        this.forEachChild((property, propertyId) => {
+            if (property.visible && property._hasValue()) {
+                value[propertyId] = property.value;
+            }
+        });
+        this._value = value;
+    }
+}
+PROPERTY_TYPE_MAPPING.object = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) => {
+    return new ObjectProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+};
+
+class ArrayProperty extends PropertyGroup {
+    constructor(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
+        super(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+        this.formPropertyFactory = formPropertyFactory;
+    }
+    addItem(value = null) {
+        let newProperty = this.addProperty();
+        newProperty.reset(value, false);
+        return newProperty;
+    }
+    addProperty() {
+        let itemSchema = this.schema.items;
+        if (Array.isArray(this.schema.items)) {
+            const itemSchemas = this.schema.items;
+            if (itemSchemas.length > this.properties.length) {
+                itemSchema = itemSchema[this.properties.length];
+            }
+            else if (this.schema.additionalItems) {
+                itemSchema = this.schema.additionalItems;
+            }
+            else {
+                // souldn't add new items since schema is undefined for the item at its position
+                return null;
+            }
+        }
+        let newProperty = this.formPropertyFactory.createProperty(itemSchema, this);
+        this.properties.push(newProperty);
+        return newProperty;
+    }
+    removeItem(item) {
+        this.properties = this.properties.filter(i => i !== item);
+        this.updateValueAndValidity(false, true);
+    }
+    setValue(value, onlySelf) {
+        this.createProperties();
+        this.resetProperties(value);
+        this.updateValueAndValidity(onlySelf, true);
+    }
+    _hasValue() {
+        return true;
+    }
+    _updateValue() {
+        this.reduceValue();
+    }
+    reduceValue() {
+        const value = [];
+        this.forEachChild((property, _) => {
+            if (property.visible && property._hasValue()) {
+                value.push(property.value);
+            }
+        });
+        this._value = value;
+    }
+    reset(value, onlySelf = true) {
+        value = value || this.schema.default || [];
+        this.properties = [];
+        this.resetProperties(value);
+        this.updateValueAndValidity(onlySelf, true);
+    }
+    createProperties() {
+        this.properties = [];
+    }
+    resetProperties(value) {
+        for (let idx in value) {
+            if (value.hasOwnProperty(idx)) {
+                let property = this.addProperty();
+                property.reset(value[idx], true);
+            }
+        }
+    }
+}
+PROPERTY_TYPE_MAPPING.array = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) => {
+    return new ArrayProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+};
+
+class StringProperty extends AtomicProperty {
+    fallbackValue() {
+        return '';
+    }
+}
+PROPERTY_TYPE_MAPPING.string = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
+    return new StringProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+};
+
+class BooleanProperty extends AtomicProperty {
+    fallbackValue() {
+        return null;
+    }
+}
+PROPERTY_TYPE_MAPPING.boolean = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
+    return new BooleanProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+};
+
+class NumberProperty extends AtomicProperty {
+    fallbackValue() {
+        return null;
+    }
+    setValue(value, onlySelf = false) {
+        if (typeof value === 'string') {
+            if (value.length) {
+                value = value.indexOf('.') > -1 ? parseFloat(value) : parseInt(value, 10);
+            }
+            else {
+                value = null;
+            }
+        }
+        this._value = value;
+        this.updateValueAndValidity(onlySelf, true);
+    }
+}
+PROPERTY_TYPE_MAPPING.integer = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
+    return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+};
+PROPERTY_TYPE_MAPPING.number = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
+    return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
+};
+
+class ValidatorRegistry {
+    constructor() {
+        this.validators = [];
+    }
+    register(path, validator) {
+        this.validators[path] = validator;
+    }
+    get(path) {
+        return this.validators[path];
+    }
+    clear() {
+        this.validators = [];
+    }
+}
+ValidatorRegistry.decorators = [
+    { type: Injectable }
+];
+
 function isPresent(o) {
     return o !== null && o !== undefined;
 }
@@ -899,42 +1148,6 @@ class SchemaPreprocessor {
     }
 }
 SchemaPreprocessor.decorators = [
-    { type: Injectable }
-];
-
-class ValidatorRegistry {
-    constructor() {
-        this.validators = [];
-    }
-    register(path, validator) {
-        this.validators[path] = validator;
-    }
-    get(path) {
-        return this.validators[path];
-    }
-    clear() {
-        this.validators = [];
-    }
-}
-ValidatorRegistry.decorators = [
-    { type: Injectable }
-];
-
-class BindingRegistry {
-    constructor() {
-        this.bindings = [];
-    }
-    clear() {
-        this.bindings = [];
-    }
-    register(path, binding) {
-        this.bindings[path] = [].concat(binding);
-    }
-    get(path) {
-        return this.bindings[path];
-    }
-}
-BindingRegistry.decorators = [
     { type: Injectable }
 ];
 
@@ -1295,10 +1508,13 @@ class FormComponent {
         this.actions = {};
         this.validators = {};
         this.bindings = {};
+        // tslint:disable-next-line:no-output-on-prefix
         this.onChange = new EventEmitter();
         this.modelChange = new EventEmitter();
         this.isValid = new EventEmitter();
+        // tslint:disable-next-line:no-output-on-prefix
         this.onErrorChange = new EventEmitter();
+        // tslint:disable-next-line:no-output-on-prefix
         this.onErrorsChange = new EventEmitter();
         this.rootProperty = null;
     }
@@ -1338,7 +1554,7 @@ class FormComponent {
             SchemaPreprocessor.preprocess(this.schema);
             this.rootProperty = this.formPropertyFactory.createProperty(this.schema);
             if (this.model) {
-                // this.rootProperty.reset(this.model, false);
+                this.rootProperty.reset(this.model, false);
             }
             this.rootProperty.valueChanges.subscribe(this.onValueChanges.bind(this));
             this.rootProperty.errorsChanges.subscribe(value => {
@@ -1346,10 +1562,10 @@ class FormComponent {
                 this.isValid.emit(!(value && value.length));
             });
         }
-        if (this.schema && (changes.model || changes.schema)) {
+        else if (this.schema && changes.model) {
             this.rootProperty.reset(this.model, false);
-            this.cdr.detectChanges();
         }
+        this.cdr.detectChanges();
     }
     setValidators() {
         this.validatorRegistry.clear();
@@ -1386,7 +1602,10 @@ class FormComponent {
     }
     setModel(value) {
         if (this.model) {
-            Object.assign(this.model, value);
+            // Object.assign(this.model, value);
+            const combined = {};
+            Object.assign(combined, value, this.model);
+            Object.assign(this.model, combined);
         }
         else {
             this.model = value;
@@ -1402,6 +1621,7 @@ class FormComponent {
             if (!this.onChangeCallback) {
                 this.setModel(value);
             }
+            this.modelChange.emit(value);
         }
         this.onChange.emit({ value: value });
     }
@@ -1623,7 +1843,9 @@ class WidgetChooserComponent {
         this.cdr.detectChanges();
     }
     ngOnDestroy() {
-        this.subs.unsubscribe();
+        if (this.subs) {
+            this.subs.unsubscribe();
+        }
     }
 }
 WidgetChooserComponent.decorators = [
@@ -1641,219 +1863,6 @@ WidgetChooserComponent.propDecorators = {
     widgetInfo: [{ type: Input }],
     widgetInstanciated: [{ type: Output }],
     container: [{ type: ViewChild, args: ['target', { read: ViewContainerRef, static: true },] }]
-};
-
-class AtomicProperty extends FormProperty {
-    setValue(value, onlySelf = false) {
-        this._value = value;
-        this.updateValueAndValidity(onlySelf, true);
-    }
-    reset(value = null, onlySelf = true) {
-        this.resetValue(value);
-        this.updateValueAndValidity(onlySelf, true);
-    }
-    resetValue(value) {
-        if (value === null) {
-            if (this.schema.default !== undefined) {
-                value = this.schema.default;
-            }
-            else {
-                value = this.fallbackValue();
-            }
-        }
-        this._value = value;
-    }
-    _hasValue() {
-        return this.fallbackValue() !== this.value;
-    }
-    _updateValue() {
-    }
-}
-
-class ObjectProperty extends PropertyGroup {
-    constructor(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-        super(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-        this.formPropertyFactory = formPropertyFactory;
-        this.propertiesId = [];
-        this.createProperties();
-    }
-    setValue(value, onlySelf) {
-        for (const propertyId in value) {
-            if (value.hasOwnProperty(propertyId)) {
-                this.properties[propertyId].setValue(value[propertyId], true);
-            }
-        }
-        this.updateValueAndValidity(onlySelf, true);
-    }
-    reset(value, onlySelf = true) {
-        value = value || this.schema.default || {};
-        this.resetProperties(value);
-        this.updateValueAndValidity(onlySelf, true);
-    }
-    resetProperties(value) {
-        for (const propertyId in this.schema.properties) {
-            if (this.schema.properties.hasOwnProperty(propertyId)) {
-                this.properties[propertyId].reset(value[propertyId], true);
-            }
-        }
-    }
-    createProperties() {
-        this.properties = {};
-        this.propertiesId = [];
-        for (const propertyId in this.schema.properties) {
-            if (this.schema.properties.hasOwnProperty(propertyId)) {
-                const propertySchema = this.schema.properties[propertyId];
-                this.properties[propertyId] = this.formPropertyFactory.createProperty(propertySchema, this, propertyId);
-                this.propertiesId.push(propertyId);
-            }
-        }
-    }
-    _hasValue() {
-        return !!Object.keys(this.value).length;
-    }
-    _updateValue() {
-        this.reduceValue();
-    }
-    _runValidation() {
-        super._runValidation();
-        if (this._errors) {
-            this._errors.forEach(error => {
-                const prop = this.searchProperty(error.path.slice(1));
-                if (prop) {
-                    prop.extendErrors(error);
-                }
-            });
-        }
-    }
-    reduceValue() {
-        const value = {};
-        this.forEachChild((property, propertyId) => {
-            if (property.visible && property._hasValue()) {
-                value[propertyId] = property.value;
-            }
-        });
-        this._value = value;
-    }
-}
-PROPERTY_TYPE_MAPPING.object = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) => {
-    return new ObjectProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-};
-
-class ArrayProperty extends PropertyGroup {
-    constructor(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
-        super(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-        this.formPropertyFactory = formPropertyFactory;
-    }
-    addItem(value = null) {
-        let newProperty = this.addProperty();
-        newProperty.reset(value, false);
-        return newProperty;
-    }
-    addProperty() {
-        let itemSchema = this.schema.items;
-        if (Array.isArray(this.schema.items)) {
-            const itemSchemas = this.schema.items;
-            if (itemSchemas.length > this.properties.length) {
-                itemSchema = itemSchema[this.properties.length];
-            }
-            else if (this.schema.additionalItems) {
-                itemSchema = this.schema.additionalItems;
-            }
-            else {
-                // souldn't add new items since schema is undefined for the item at its position
-                return null;
-            }
-        }
-        let newProperty = this.formPropertyFactory.createProperty(itemSchema, this);
-        this.properties.push(newProperty);
-        return newProperty;
-    }
-    removeItem(item) {
-        this.properties = this.properties.filter(i => i !== item);
-        this.updateValueAndValidity(false, true);
-    }
-    setValue(value, onlySelf) {
-        this.createProperties();
-        this.resetProperties(value);
-        this.updateValueAndValidity(onlySelf, true);
-    }
-    _hasValue() {
-        return true;
-    }
-    _updateValue() {
-        this.reduceValue();
-    }
-    reduceValue() {
-        const value = [];
-        this.forEachChild((property, _) => {
-            if (property.visible && property._hasValue()) {
-                value.push(property.value);
-            }
-        });
-        this._value = value;
-    }
-    reset(value, onlySelf = true) {
-        value = value || this.schema.default || [];
-        this.properties = [];
-        this.resetProperties(value);
-        this.updateValueAndValidity(onlySelf, true);
-    }
-    createProperties() {
-        this.properties = [];
-    }
-    resetProperties(value) {
-        for (let idx in value) {
-            if (value.hasOwnProperty(idx)) {
-                let property = this.addProperty();
-                property.reset(value[idx], true);
-            }
-        }
-    }
-}
-PROPERTY_TYPE_MAPPING.array = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, formPropertyFactory, logger) => {
-    return new ArrayProperty(formPropertyFactory, schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-};
-
-class StringProperty extends AtomicProperty {
-    fallbackValue() {
-        return '';
-    }
-}
-PROPERTY_TYPE_MAPPING.string = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
-    return new StringProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-};
-
-class BooleanProperty extends AtomicProperty {
-    fallbackValue() {
-        return null;
-    }
-}
-PROPERTY_TYPE_MAPPING.boolean = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
-    return new BooleanProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-};
-
-class NumberProperty extends AtomicProperty {
-    fallbackValue() {
-        return null;
-    }
-    setValue(value, onlySelf = false) {
-        if (typeof value === 'string') {
-            if (value.length) {
-                value = value.indexOf('.') > -1 ? parseFloat(value) : parseInt(value, 10);
-            }
-            else {
-                value = null;
-            }
-        }
-        this._value = value;
-        this.updateValueAndValidity(onlySelf, true);
-    }
-}
-PROPERTY_TYPE_MAPPING.integer = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
-    return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
-};
-PROPERTY_TYPE_MAPPING.number = (schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) => {
-    return new NumberProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger);
 };
 
 class Widget {
@@ -1995,6 +2004,7 @@ ObjectWidget.decorators = [
             },] }
 ];
 
+// tslint:disable-next-line:component-class-suffix
 class CheckboxWidget extends ControlWidget {
     constructor() {
         super(...arguments);
@@ -2004,6 +2014,7 @@ class CheckboxWidget extends ControlWidget {
         const control = this.control;
         this.formProperty.valueChanges.subscribe((newValue) => {
             if (control.value !== newValue) {
+                this.checked = {};
                 control.setValue(newValue, { emitEvent: false });
                 if (newValue && Array.isArray(newValue)) {
                     newValue.map(v => this.checked[v] = true);
@@ -2045,7 +2056,7 @@ CheckboxWidget.decorators = [
 		<div *ngFor="let option of schema.items.oneOf" class="checkbox">
 			<label class="horizontal control-label">
 				<input [attr.name]="name"
-					value="{{option.enum[0]}}" type="checkbox" 
+					value="{{option.enum[0]}}" type="checkbox"
 					[attr.disabled]="schema.readOnly"
 					(change)="onCheck($event.target)"
 					[attr.checked]="checked[option.enum[0]] ? true : null"
@@ -2785,5 +2796,5 @@ TemplateSchemaModule.decorators = [
  * Generated bundle index. Do not edit.
  */
 
-export { ActionRegistry, ArrayLayoutWidget, ArrayProperty, ArrayWidget, AtomicProperty, BindingRegistry, BooleanProperty, ButtonWidget, CheckboxWidget, ControlWidget, DefaultWidgetRegistry, DisableControlDirective, ExpressionCompilerFactory, FileWidget, FormComponent, FormElementComponent, FormElementComponentAction, FormProperty, FormPropertyFactory, IntegerWidget, JEXLExpressionCompiler, JEXLExpressionCompilerFactory, JEXLExpressionCompilerVisibiltyIf, LOG_LEVEL, LogService, NumberProperty, ObjectLayoutWidget, ObjectProperty, ObjectWidget, PropertyGroup, RadioWidget, RangeWidget, SchemaFormModule, SchemaPreprocessor, SchemaValidatorFactory, SelectWidget, StringProperty, StringWidget, TemplateSchemaModule, TerminatorService, TextAreaWidget, ValidatorRegistry, Widget, WidgetChooserComponent, WidgetFactory, WidgetRegistry, ZSchemaValidatorFactory, useFactory as ɵa, DefaultLogService as ɵb, ActionRegistry as ɵc, ValidatorRegistry as ɵd, PropertyBindingRegistry as ɵe, BindingRegistry as ɵf, SchemaPreprocessor as ɵg, FormPropertyFactory as ɵh, DefaultWidget as ɵi, TemplateSchemaDirective as ɵj, FieldParent as ɵk, TemplateSchemaElement as ɵl, TemplateSchemaService as ɵm, FieldComponent as ɵn, ItemComponent as ɵo, ButtonComponent as ɵp };
+export { ActionRegistry, ArrayLayoutWidget, ArrayProperty, ArrayWidget, AtomicProperty, BindingRegistry, BooleanProperty, ButtonWidget, CheckboxWidget, ControlWidget, DefaultWidgetRegistry, DisableControlDirective, ExpressionCompilerFactory, FileWidget, FormComponent, FormElementComponent, FormElementComponentAction, FormProperty, FormPropertyFactory, IntegerWidget, JEXLExpressionCompiler, JEXLExpressionCompilerFactory, JEXLExpressionCompilerVisibiltyIf, LOG_LEVEL, LogService, NumberProperty, ObjectLayoutWidget, ObjectProperty, ObjectWidget, PropertyGroup, RadioWidget, RangeWidget, SchemaFormModule, SchemaPreprocessor, SchemaValidatorFactory, SelectWidget, StringProperty, StringWidget, TemplateSchemaModule, TerminatorService, TextAreaWidget, ValidatorRegistry, Widget, WidgetChooserComponent, WidgetFactory, WidgetRegistry, ZSchemaValidatorFactory, useFactory as ɵa, DefaultLogService as ɵb, PropertyBindingRegistry as ɵc, ActionRegistry as ɵd, BindingRegistry as ɵe, DefaultWidget as ɵf, TemplateSchemaDirective as ɵg, FieldParent as ɵh, TemplateSchemaElement as ɵi, TemplateSchemaService as ɵj, FieldComponent as ɵk, ItemComponent as ɵl, ButtonComponent as ɵm, ValidatorRegistry as ɵn };
 //# sourceMappingURL=ngx-schema-form.js.map

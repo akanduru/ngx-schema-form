@@ -7,7 +7,6 @@ import { FieldParent } from './field-parent';
 import { FieldType, Field } from './field';
 import { ItemComponent } from './item/item.component';
 import { ISchema } from '../../model/ISchema';
-import * as ɵngcc0 from '@angular/core';
 export declare class FieldComponent extends FieldParent implements Field, OnChanges, AfterContentInit {
     private elementRef;
     private templateSchemaService;
@@ -36,8 +35,4 @@ export declare class FieldComponent extends FieldParent implements Field, OnChan
     private getOneOf;
     private setTitleFromContent;
     ngAfterContentInit(): void;
-    static ɵfac: ɵngcc0.ɵɵFactoryDef<FieldComponent, never>;
-    static ɵcmp: ɵngcc0.ɵɵComponentDefWithMeta<FieldComponent, "sf-field", never, { "type": "type"; "schema": "schema"; "title": "title"; "name": "name"; "format": "format"; "required": "required"; "readOnly": "readOnly"; "description": "description"; "placeholder": "placeholder"; "widget": "widget"; "validator": "validator"; }, {}, ["childFields", "childItems", "childButtons"], ["*"]>;
 }
-
-//# sourceMappingURL=field.component.d.ts.map
