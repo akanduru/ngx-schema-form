@@ -54,7 +54,7 @@ describe('JsonSchemaExampleComponent', () => {
 });
 
 
-fdescribe('JsonSchemaExampleComponent - canonical-path', () => {
+describe('JsonSchemaExampleComponent - canonical-path', () => {
   let component: JsonSchemaExampleComponent;
   let fixture: ComponentFixture<JsonSchemaExampleComponent>;
 
@@ -132,10 +132,9 @@ fdescribe('JsonSchemaExampleComponent - canonical-path', () => {
       // check label click checks checkbox
       _test_boolean_checkbox1.nativeElement.checked = false;
       fixture.detectChanges();
-      _test_label_checkbox1.nativeElement.click();
+      _test_boolean_checkbox1.nativeElement.click();
       fixture.detectChanges();
       expect(_test_boolean_checkbox1.nativeElement.checked).toBeTruthy();
-      /*
 
       // add item no 2
       _test_add_item_button.triggerEventHandler('click', null);
@@ -161,17 +160,17 @@ fdescribe('JsonSchemaExampleComponent - canonical-path', () => {
       // check label click checks checkbox
       _test_boolean_checkbox1.nativeElement.checked = false;
       fixture.detectChanges();
-      _test_label_checkbox1.nativeElement.click();
+      _test_boolean_checkbox1.nativeElement.click();
       fixture.detectChanges();
       expect(_test_boolean_checkbox1.nativeElement.checked).toBeTruthy();
 
       // check label click checks checkbox
       _test_boolean_checkbox2.nativeElement.checked = false;
       fixture.detectChanges();
-      _test_label_checkbox2.nativeElement.click();
+      _test_boolean_checkbox2.nativeElement.click();
       fixture.detectChanges();
       expect(_test_boolean_checkbox2.nativeElement.checked).toBeTruthy();
-*/
+
     });
 
   }));

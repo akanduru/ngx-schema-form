@@ -12,7 +12,7 @@ import {
 
 import { JsonSchemaExampleComponent } from './json-schema-example.component';
 
-xdescribe('JsonSchemaExampleComponent', () => {
+describe('JsonSchemaExampleComponent', () => {
   let component: JsonSchemaExampleComponent;
   let fixture: ComponentFixture<JsonSchemaExampleComponent>;
 
