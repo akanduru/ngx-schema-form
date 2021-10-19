@@ -40,7 +40,7 @@ export class CheckboxWidget extends ControlWidget implements AfterViewInit {
 		const control = this.control;
 		this.formProperty.valueChanges.subscribe((newValue) => {
 			if (control.value !== newValue) {
-			  this.checked = {};
+			  this.checked = {}; // FIX: Reset the selections before reading from newValue.
 				control.setValue(newValue, { emitEvent: false });
 				if (newValue && Array.isArray(newValue)) {
 					newValue.map(v => this.checked[v] = true);

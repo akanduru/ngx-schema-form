@@ -142,6 +142,7 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
       SchemaPreprocessor.preprocess(this.schema);
       this.rootProperty = this.formPropertyFactory.createProperty(this.schema);
       if (this.model) {
+        // FIX: Root property is freshly created. Update it with the model.
         this.rootProperty.reset(this.model, false);
       }
 
@@ -155,6 +156,7 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
       });
 
     } else if (this.schema && changes.model) {
+      // FIX: Only model is updated. Keep the same subscribers of root property.
       this.rootProperty.reset(this.model, false);
     }
     this.cdr.detectChanges();
@@ -200,6 +202,9 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
 
   private setModel(value: any) {
     if (this.model) {
+      // FIX - Ajay: Avoid overwriting the model,
+      // and keep model reference unchanged.
+
       // Object.assign(this.model, value);
       const combined = {};
       Object.assign(combined, value, this.model);
@@ -220,7 +225,7 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
       if (!this.onChangeCallback) {
         this.setModel(value);
       }
-      this.modelChange.emit(value);
+      this.modelChange.emit(value); // FIX: Emit model change event
     }
     this.onChange.emit({value: value});
   }
