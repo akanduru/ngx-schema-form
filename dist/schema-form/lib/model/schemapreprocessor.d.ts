@@ -1,4 +1,5 @@
 import { ISchema } from './ISchema';
+import * as ɵngcc0 from '@angular/core';
 export declare class SchemaPreprocessor {
     static preprocess(jsonSchema: ISchema, path?: string): any;
     private static checkProperties;
@@ -19,4 +20,8 @@ export declare class SchemaPreprocessor {
      * @param schema JSON schema to enable alias names.
      */
     private static normalizeExtensions;
+    static ɵfac: ɵngcc0.ɵɵFactoryDef<SchemaPreprocessor, never>;
+    static ɵprov: ɵngcc0.ɵɵInjectableDef<SchemaPreprocessor>;
 }
+
+//# sourceMappingURL=schemapreprocessor.d.ts.map

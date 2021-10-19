@@ -10,6 +10,7 @@ import { Binding } from './model/binding';
 import { BindingRegistry } from './model/bindingregistry';
 import { TerminatorService } from './terminator.service';
 import { ISchema } from './model/ISchema';
+import * as ɵngcc0 from '@angular/core';
 export declare function useFactory(schemaValidatorFactory: any, validatorRegistry: any, propertyBindingRegistry: any, expressionCompilerFactory: any, logService: any): FormPropertyFactory;
 export declare class FormComponent implements OnChanges, ControlValueAccessor {
     private formPropertyFactory;
@@ -53,4 +54,8 @@ export declare class FormComponent implements OnChanges, ControlValueAccessor {
     reset(): void;
     private setModel;
     private onValueChanges;
+    static ɵfac: ɵngcc0.ɵɵFactoryDef<FormComponent, never>;
+    static ɵcmp: ɵngcc0.ɵɵComponentDefWithMeta<FormComponent, "sf-form", never, { "schema": "schema"; "actions": "actions"; "validators": "validators"; "bindings": "bindings"; "model": "model"; }, { "onChange": "onChange"; "modelChange": "modelChange"; "isValid": "isValid"; "onErrorChange": "onErrorChange"; "onErrorsChange": "onErrorsChange"; }, never, never>;
 }
+
+//# sourceMappingURL=form.component.d.ts.map

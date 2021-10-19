@@ -8,8 +8,8 @@ import {WidgetRegistry, Validator, Binding, FormProperty, PropertyGroup} from 'n
 import {Subscription} from 'rxjs';
 
 import sampleSchema1 from './sampleschema.json';
-import sampleSchema2 from './otherschema.json';
 import sampleModel from './samplemodel.json';
+import sampleModel1 from './samplemodel1.json';
 import binding_sample_schema from './binding_sample_schema.json';
 import binding_sample_model from './binding_sample_model.json';
 import binding_sample_bindings from './binding_sample_bindings';
@@ -21,6 +21,7 @@ import {AppService, AppData} from '../app.service';
 import {ISchema} from 'ngx-schema-form';
 
 @Component({
+  // tslint:disable-next-line:component-selector
   selector: 'sf-json-schema-example',
   templateUrl: './json-schema-example.component.html',
   encapsulation: ViewEncapsulation.None,
@@ -32,10 +33,11 @@ export class JsonSchemaExampleComponent implements OnInit, OnDestroy {
   fieldValidators: { [fieldId: string]: Validator } = {};
   actions = {};
   fieldBindings: { [path: string]: Binding[] } = {};
-  schemaUrl: string;
 
   private subs: Subscription;
 
+  models = [sampleModel, sampleModel1];
+  modelId = 0;
   samples = [
     {label: 'Sample 1 - General', event: this.changeSchemaFirst, selected: true},
     {label: 'Sample 2 - Custom bindings', event: this.changeSchemaWithBindings, selected: false},
@@ -93,7 +95,7 @@ export class JsonSchemaExampleComponent implements OnInit, OnDestroy {
 
   changeSchemaFirst() {
     this.schema = sampleSchema1 as unknown as ISchema;
-    this.model = sampleModel;
+    this.model = this.createModel(this.modelId);
     this.fieldBindings = {};
     this.fieldValidators = {};
     this.actions = {};
@@ -131,7 +133,7 @@ export class JsonSchemaExampleComponent implements OnInit, OnDestroy {
     };
     this.fieldValidators['/promotion'] = (value, property, form) => {
       if (value === 'student') {
-        const bornOn = form.getProperty('/bornOn');
+        const bornOn = form.getProperty('bornOn');
 
         if (bornOn.valid) {
           const date = bornOn.value.split('-');
@@ -224,7 +226,7 @@ export class JsonSchemaExampleComponent implements OnInit, OnDestroy {
     this.actions = {};
   }
 
-  changeSchemaCanonicalPath(){
+  changeSchemaCanonicalPath() {
     this.schema = sample_canonical_path as unknown as ISchema;
     this.model = {};
     this.fieldBindings = {};
@@ -242,4 +244,12 @@ export class JsonSchemaExampleComponent implements OnInit, OnDestroy {
     this.value = value;
   }
 
+  selectModel(modelNum) {
+    this.modelId = modelNum;
+    this.model = this.createModel(modelNum);
+  }
+
+  createModel(modelNum) {
+    return JSON.parse(JSON.stringify(this.models[modelNum]));
+  }
 }

@@ -20,12 +20,17 @@
       </sf-form>
     </div>
     <div class="col-md-4">
+      <button *ngFor="let mSource of models; index as i" (click)="selectModel(i)">Model {{i+1}}</button>
       <h3>Schema:</h3>
       <pre>{{schema | json}}</pre>
     </div>
     <div class="col-md-4">
-      <h3>Model:</h3>
+      <h3>Model source {{modelId+1}}:</h3>
+      <pre>{{models[modelId] | json}}</pre>
+      <h3>Value:</h3>
       <pre>{{value | json}}</pre>
+      <h3>Model instance:</h3>
+      <pre>{{model | json}}</pre>
     </div>
   </div>
 </div>

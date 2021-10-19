@@ -19,7 +19,7 @@ import { ControlWidget } from '../../widget';
 		<div *ngFor="let option of schema.items.oneOf" class="checkbox">
 			<label class="horizontal control-label">
 				<input [attr.name]="name"
-					value="{{option.enum[0]}}" type="checkbox" 
+					value="{{option.enum[0]}}" type="checkbox"
 					[attr.disabled]="schema.readOnly"
 					(change)="onCheck($event.target)"
 					[attr.checked]="checked[option.enum[0]] ? true : null"
@@ -31,6 +31,7 @@ import { ControlWidget } from '../../widget';
 	</ng-container>
 </div>`
 })
+// tslint:disable-next-line:component-class-suffix
 export class CheckboxWidget extends ControlWidget implements AfterViewInit {
 
 	checked: any = {};
@@ -39,6 +40,7 @@ export class CheckboxWidget extends ControlWidget implements AfterViewInit {
 		const control = this.control;
 		this.formProperty.valueChanges.subscribe((newValue) => {
 			if (control.value !== newValue) {
+			  this.checked = {};
 				control.setValue(newValue, { emitEvent: false });
 				if (newValue && Array.isArray(newValue)) {
 					newValue.map(v => this.checked[v] = true);

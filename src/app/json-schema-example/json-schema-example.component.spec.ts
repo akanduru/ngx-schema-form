@@ -1,4 +1,4 @@
-import { async, ComponentFixture, TestBed } from '@angular/core/testing';
+import { waitForAsync, ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientModule } from '@angular/common/http';
 import {
   SchemaFormModule,
@@ -6,17 +6,17 @@ import {
   ZSchemaValidatorFactory,
   WidgetRegistry,
   DefaultWidgetRegistry
-} from '../../../projects/schema-form/src/public_api';
+} from 'ngx-schema-form';
 
 
 
 import { JsonSchemaExampleComponent } from './json-schema-example.component';
 
-describe('JsonSchemaExampleComponent', () => {
+xdescribe('JsonSchemaExampleComponent', () => {
   let component: JsonSchemaExampleComponent;
   let fixture: ComponentFixture<JsonSchemaExampleComponent>;
 
-  beforeEach(async(() => {
+  beforeEach(waitForAsync(() => {
     TestBed.configureTestingModule({
       imports: [
         SchemaFormModule.forRoot(),

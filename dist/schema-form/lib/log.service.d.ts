@@ -1,4 +1,5 @@
 import { InjectionToken } from "@angular/core";
+import * as ɵngcc0 from '@angular/core';
 export declare const LOG_LEVEL: InjectionToken<LogLevel>;
 /**
  * Represents the different logging levels of the `console` output.
@@ -54,4 +55,8 @@ export declare class DefaultLogService extends LogService {
         (...data: any[]): void;
         (message?: any, ...optionalParams: any[]): void;
     };
+    static ɵfac: ɵngcc0.ɵɵFactoryDef<DefaultLogService, [{ optional: true; }]>;
+    static ɵprov: ɵngcc0.ɵɵInjectableDef<DefaultLogService>;
 }
+
+//# sourceMappingURL=log.service.d.ts.map

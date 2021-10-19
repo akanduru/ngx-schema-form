@@ -7,6 +7,7 @@ import { TemplateSchemaService } from './template-schema.service';
 import { FieldComponent } from './field/field.component';
 import { ButtonComponent } from './button/button.component';
 import { FieldParent } from './field/field-parent';
+import * as ɵngcc0 from '@angular/core';
 export declare class TemplateSchemaDirective extends FieldParent implements AfterContentInit {
     protected actionRegistry: ActionRegistry;
     protected validatorRegistry: ValidatorRegistry;
@@ -18,4 +19,8 @@ export declare class TemplateSchemaDirective extends FieldParent implements Afte
     constructor(actionRegistry: ActionRegistry, validatorRegistry: ValidatorRegistry, formComponent: FormComponent, terminatorService: TerminatorService, templateSchemaService: TemplateSchemaService);
     setFormDocumentSchema(fields: FieldComponent[]): void;
     ngAfterContentInit(): void;
+    static ɵfac: ɵngcc0.ɵɵFactoryDef<TemplateSchemaDirective, never>;
+    static ɵdir: ɵngcc0.ɵɵDirectiveDefWithMeta<TemplateSchemaDirective, "sf-form[templateSchema]", never, {}, {}, ["childFields", "childButtons"]>;
 }
+
+//# sourceMappingURL=template-schema.directive.d.ts.map

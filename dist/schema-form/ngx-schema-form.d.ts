@@ -18,3 +18,5 @@ export { ItemComponent as ɵo } from './lib/template-schema/field/item/item.comp
 export { TemplateSchemaElement as ɵl } from './lib/template-schema/template-schema-element';
 export { TemplateSchemaDirective as ɵj } from './lib/template-schema/template-schema.directive';
 export { TemplateSchemaService as ɵm } from './lib/template-schema/template-schema.service';
+
+//# sourceMappingURL=ngx-schema-form.d.ts.map
