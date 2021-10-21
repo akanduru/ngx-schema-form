@@ -1606,10 +1606,10 @@ class FormComponent {
         if (this.model) {
             // FIX - Ajay: Avoid overwriting the model,
             // and keep model reference unchanged.
+            for (const prop of Object.getOwnPropertyNames(this.model)) {
+                delete this.model[prop];
+            }
             Object.assign(this.model, value);
-            // const combined = {};
-            // Object.assign(combined, value, this.model);
-            // Object.assign(this.model, combined);
         }
         else {
             this.model = value;
@@ -1625,7 +1625,7 @@ class FormComponent {
             if (!this.onChangeCallback) {
                 this.setModel(value);
             }
-            this.modelChange.emit(value); // FIX: Emit model change event
+            this.modelChange.emit(this.model); // FIX: Emit model change event
         }
         this.onChange.emit({ value: value });
     }
