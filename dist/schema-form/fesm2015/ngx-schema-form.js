@@ -1554,6 +1554,7 @@ class FormComponent {
             SchemaPreprocessor.preprocess(this.schema);
             this.rootProperty = this.formPropertyFactory.createProperty(this.schema);
             if (this.model) {
+                // FIX: Root property is freshly created. Update it with the model.
                 this.rootProperty.reset(this.model, false);
             }
             this.rootProperty.valueChanges.subscribe(this.onValueChanges.bind(this));
@@ -1563,6 +1564,7 @@ class FormComponent {
             });
         }
         else if (this.schema && changes.model) {
+            // FIX: Only model is updated. Keep the same subscribers of root property.
             this.rootProperty.reset(this.model, false);
         }
         this.cdr.detectChanges();
@@ -1602,10 +1604,12 @@ class FormComponent {
     }
     setModel(value) {
         if (this.model) {
-            // Object.assign(this.model, value);
-            const combined = {};
-            Object.assign(combined, value, this.model);
-            Object.assign(this.model, combined);
+            // FIX - Ajay: Avoid overwriting the model,
+            // and keep model reference unchanged.
+            for (const prop of Object.getOwnPropertyNames(this.model)) {
+                delete this.model[prop];
+            }
+            Object.assign(this.model, value);
         }
         else {
             this.model = value;
@@ -1621,7 +1625,7 @@ class FormComponent {
             if (!this.onChangeCallback) {
                 this.setModel(value);
             }
-            this.modelChange.emit(value);
+            this.modelChange.emit(this.model); // FIX: Emit model change event
         }
         this.onChange.emit({ value: value });
     }
@@ -1843,7 +1847,7 @@ class WidgetChooserComponent {
         this.cdr.detectChanges();
     }
     ngOnDestroy() {
-        if (this.subs) {
+        if (this.subs) { // FIX: Guard against null, something happening in the tests.
             this.subs.unsubscribe();
         }
     }
@@ -2014,7 +2018,7 @@ class CheckboxWidget extends ControlWidget {
         const control = this.control;
         this.formProperty.valueChanges.subscribe((newValue) => {
             if (control.value !== newValue) {
-                this.checked = {};
+                this.checked = {}; // FIX: Reset the selections before reading from newValue.
                 control.setValue(newValue, { emitEvent: false });
                 if (newValue && Array.isArray(newValue)) {
                     newValue.map(v => this.checked[v] = true);

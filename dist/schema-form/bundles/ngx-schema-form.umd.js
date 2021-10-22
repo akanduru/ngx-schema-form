@@ -8,44 +8,6 @@
 
     var ZSchema__default = /*#__PURE__*/_interopDefaultLegacy(ZSchema);
 
-    var ActionRegistry = /** @class */ (function () {
-        function ActionRegistry() {
-            this.actions = {};
-        }
-        ActionRegistry.prototype.clear = function () {
-            this.actions = {};
-        };
-        ActionRegistry.prototype.register = function (actionId, action) {
-            this.actions[actionId] = action;
-        };
-        ActionRegistry.prototype.get = function (actionId) {
-            return this.actions[actionId];
-        };
-        return ActionRegistry;
-    }());
-    ActionRegistry.decorators = [
-        { type: core.Injectable }
-    ];
-
-    var BindingRegistry = /** @class */ (function () {
-        function BindingRegistry() {
-            this.bindings = [];
-        }
-        BindingRegistry.prototype.clear = function () {
-            this.bindings = [];
-        };
-        BindingRegistry.prototype.register = function (path, binding) {
-            this.bindings[path] = [].concat(binding);
-        };
-        BindingRegistry.prototype.get = function (path) {
-            return this.bindings[path];
-        };
-        return BindingRegistry;
-    }());
-    BindingRegistry.decorators = [
-        { type: core.Injectable }
-    ];
-
     /*! *****************************************************************************
     Copyright (c) Microsoft Corporation.
 
@@ -354,6 +316,44 @@
         privateMap.set(receiver, value);
         return value;
     }
+
+    var ActionRegistry = /** @class */ (function () {
+        function ActionRegistry() {
+            this.actions = {};
+        }
+        ActionRegistry.prototype.clear = function () {
+            this.actions = {};
+        };
+        ActionRegistry.prototype.register = function (actionId, action) {
+            this.actions[actionId] = action;
+        };
+        ActionRegistry.prototype.get = function (actionId) {
+            return this.actions[actionId];
+        };
+        return ActionRegistry;
+    }());
+    ActionRegistry.decorators = [
+        { type: core.Injectable }
+    ];
+
+    var BindingRegistry = /** @class */ (function () {
+        function BindingRegistry() {
+            this.bindings = [];
+        }
+        BindingRegistry.prototype.clear = function () {
+            this.bindings = [];
+        };
+        BindingRegistry.prototype.register = function (path, binding) {
+            this.bindings[path] = [].concat(binding);
+        };
+        BindingRegistry.prototype.get = function (path) {
+            return this.bindings[path];
+        };
+        return BindingRegistry;
+    }());
+    BindingRegistry.decorators = [
+        { type: core.Injectable }
+    ];
 
     var FormProperty = /** @class */ (function () {
         function FormProperty(schemaValidatorFactory, validatorRegistry, expressionCompilerFactory, schema, parent, path, logger) {
@@ -2262,6 +2262,7 @@
                 SchemaPreprocessor.preprocess(this.schema);
                 this.rootProperty = this.formPropertyFactory.createProperty(this.schema);
                 if (this.model) {
+                    // FIX: Root property is freshly created. Update it with the model.
                     this.rootProperty.reset(this.model, false);
                 }
                 this.rootProperty.valueChanges.subscribe(this.onValueChanges.bind(this));
@@ -2271,6 +2272,7 @@
                 });
             }
             else if (this.schema && changes.model) {
+                // FIX: Only model is updated. Keep the same subscribers of root property.
                 this.rootProperty.reset(this.model, false);
             }
             this.cdr.detectChanges();
@@ -2309,11 +2311,24 @@
             this.rootProperty.reset(null, true);
         };
         FormComponent.prototype.setModel = function (value) {
+            var e_1, _a;
             if (this.model) {
-                // Object.assign(this.model, value);
-                var combined = {};
-                Object.assign(combined, value, this.model);
-                Object.assign(this.model, combined);
+                try {
+                    // FIX - Ajay: Avoid overwriting the model,
+                    // and keep model reference unchanged.
+                    for (var _b = __values(Object.getOwnPropertyNames(this.model)), _c = _b.next(); !_c.done; _c = _b.next()) {
+                        var prop = _c.value;
+                        delete this.model[prop];
+                    }
+                }
+                catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                finally {
+                    try {
+                        if (_c && !_c.done && (_a = _b.return)) _a.call(_b);
+                    }
+                    finally { if (e_1) throw e_1.error; }
+                }
+                Object.assign(this.model, value);
             }
             else {
                 this.model = value;
@@ -2329,7 +2344,7 @@
                 if (!this.onChangeCallback) {
                     this.setModel(value);
                 }
-                this.modelChange.emit(value);
+                this.modelChange.emit(this.model); // FIX: Emit model change event
             }
             this.onChange.emit({ value: value });
         };
@@ -2571,7 +2586,7 @@
             this.cdr.detectChanges();
         };
         WidgetChooserComponent.prototype.ngOnDestroy = function () {
-            if (this.subs) {
+            if (this.subs) { // FIX: Guard against null, something happening in the tests.
                 this.subs.unsubscribe();
             }
         };
@@ -2750,7 +2765,7 @@
             var control = this.control;
             this.formProperty.valueChanges.subscribe(function (newValue) {
                 if (control.value !== newValue) {
-                    _this.checked = {};
+                    _this.checked = {}; // FIX: Reset the selections before reading from newValue.
                     control.setValue(newValue, { emitEvent: false });
                     if (newValue && Array.isArray(newValue)) {
                         newValue.map(function (v) { return _this.checked[v] = true; });
