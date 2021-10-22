@@ -156,7 +156,7 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
       });
 
     } else if (this.schema && changes.model) {
-      // FIX: Only model is updated. Keep the same subscribers of root property.
+      // FIX: Only model is changed. Keep the same subscribers of root property.
       this.rootProperty.reset(this.model, false);
     }
     this.cdr.detectChanges();
@@ -202,8 +202,8 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
 
   private setModel(value: any) {
     if (this.model) {
-      // FIX - Ajay: Avoid overwriting the model,
-      // and keep model reference unchanged.
+      // FIX: Value is already updated with model. Keep model in sync with value,
+      // but don't change the model reference.
       for (const prop of Object.getOwnPropertyNames(this.model)) {
         delete this.model[prop];
       }
