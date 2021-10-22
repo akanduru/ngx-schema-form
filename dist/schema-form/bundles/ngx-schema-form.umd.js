@@ -2272,7 +2272,7 @@
                 });
             }
             else if (this.schema && changes.model) {
-                // FIX: Only model is updated. Keep the same subscribers of root property.
+                // FIX: Only model is changed. Keep the same subscribers of root property.
                 this.rootProperty.reset(this.model, false);
             }
             this.cdr.detectChanges();
@@ -2314,8 +2314,8 @@
             var e_1, _a;
             if (this.model) {
                 try {
-                    // FIX - Ajay: Avoid overwriting the model,
-                    // and keep model reference unchanged.
+                    // FIX: Value is already updated with model. Keep model in sync with value,
+                    // but don't change the model reference.
                     for (var _b = __values(Object.getOwnPropertyNames(this.model)), _c = _b.next(); !_c.done; _c = _b.next()) {
                         var prop = _c.value;
                         delete this.model[prop];
