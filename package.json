@@ -11,7 +11,6 @@
     "test:lib": "ng test schema-form --watch=false",
     "test": "ng test --watch=false",
     "lint": "ng lint",
-    "prepublishOnly": "npm run build:lib && npm install dist/schema-form --no-save",
     "get_version": "cat ./projects/schema-form/package.json | grep version  | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]'"
   },
   "private": true,
@@ -27,6 +26,7 @@
     "bootstrap": "^4.4.1",
     "core-js": "^2.5.4",
     "jexl": "^2.2.2",
+    "ngx-schema-form": "file:projects/schema-form",
     "rxjs": "^6.6.6",
     "tslib": "^2.0.0",
     "z-schema": "^4.2.2",
@@ -52,9 +52,5 @@
     "ts-node": "~7.0.1",
     "tslint": "~6.1.0",
     "typescript": "~4.0.5"
-  },
-  "files": [
-    "dist/*"
-  ],
-  "main": "dist/schema-form/ngx-schema-form.d.ts"
+  }
 }

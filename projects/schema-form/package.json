@@ -1,7 +1,6 @@
 {
-  "name": "ngx-schema-form",
+  "name": "@lhncbc/ngx-schema-form",
   "version": "2.6.6",
-  "private": true,
   "repository": {
     "type": "git",
     "url": "git+https://github.com/akanduru/ngx-schema-form"
