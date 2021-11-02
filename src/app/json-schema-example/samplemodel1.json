@@ -1,0 +1,14 @@
+{
+	"firstName": "John Two",
+	"lastName": "Doe2",
+	"transactionNumber":2,
+	"favoriteColor": "#aaafff",
+	"transactionDescription": "2 Payment for your subscription",
+	"password": "admin2",
+	"category": ["materials"],
+	"freeShipping": true,
+	"customEmail": "Nothing here...",
+  "moreInfo": false,
+  "bornOn": "2002-02-02",
+  "promotion": "student"
+}

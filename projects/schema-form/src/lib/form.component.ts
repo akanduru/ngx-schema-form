@@ -9,22 +9,22 @@ import {
 } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
-import {Action} from './model/action';
-import {ActionRegistry} from './model/actionregistry';
-import {FormProperty} from './model/formproperty';
-import {FormPropertyFactory} from './model/formpropertyfactory';
-import {SchemaPreprocessor} from './model/schemapreprocessor';
-import {ValidatorRegistry} from './model/validatorregistry';
-import {Validator} from './model/validator';
-import {Binding} from './model/binding';
-import {BindingRegistry} from './model/bindingregistry';
+import {Action} from './model';
+import {ActionRegistry} from './model';
+import {FormProperty} from './model';
+import {FormPropertyFactory} from './model';
+import {SchemaPreprocessor} from './model';
+import {ValidatorRegistry} from './model';
+import {Validator} from './model';
+import {Binding} from './model';
+import {BindingRegistry} from './model';
 
 import {SchemaValidatorFactory} from './schemavalidatorfactory';
 import {WidgetFactory} from './widgetfactory';
 import {TerminatorService} from './terminator.service';
 import {PropertyBindingRegistry} from './property-binding-registry';
 import { ExpressionCompilerFactory } from './expression-compiler-factory';
-import {ISchema} from './model/ISchema';
+import {ISchema} from './model';
 import { LogService } from './log.service';
 
 export function useFactory(schemaValidatorFactory, validatorRegistry, propertyBindingRegistry, expressionCompilerFactory, logService) {
@@ -69,14 +69,17 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
 
   @Input() bindings: { [path: string]: Binding } = {};
 
+  // tslint:disable-next-line:no-output-on-prefix
   @Output() onChange = new EventEmitter<{ value: any }>();
 
   @Output() modelChange = new EventEmitter<any>();
 
   @Output() isValid = new EventEmitter<boolean>();
 
+  // tslint:disable-next-line:no-output-on-prefix
   @Output() onErrorChange = new EventEmitter<{ value: any[] }>();
 
+  // tslint:disable-next-line:no-output-on-prefix
   @Output() onErrorsChange = new EventEmitter<{value: any}>();
 
   rootProperty: FormProperty = null;
@@ -139,7 +142,8 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
       SchemaPreprocessor.preprocess(this.schema);
       this.rootProperty = this.formPropertyFactory.createProperty(this.schema);
       if (this.model) {
-        // this.rootProperty.reset(this.model, false);
+        // FIX: Root property is freshly created. Update it with the model.
+        this.rootProperty.reset(this.model, false);
       }
 
       this.rootProperty.valueChanges.subscribe(
@@ -151,12 +155,11 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
         this.isValid.emit(!(value && value.length));
       });
 
-    }
-
-    if (this.schema && (changes.model || changes.schema )) {
+    } else if (this.schema && changes.model) {
+      // FIX: Only model is changed. Keep the same subscribers of root property.
       this.rootProperty.reset(this.model, false);
-      this.cdr.detectChanges();
     }
+    this.cdr.detectChanges();
 
   }
 
@@ -199,6 +202,11 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
 
   private setModel(value: any) {
     if (this.model) {
+      // FIX: Value is already updated with model. Keep model in sync with value,
+      // but don't change the model reference.
+      for (const prop of Object.getOwnPropertyNames(this.model)) {
+        delete this.model[prop];
+      }
       Object.assign(this.model, value);
     } else {
       this.model = value;
@@ -216,6 +224,7 @@ export class FormComponent implements OnChanges, ControlValueAccessor {
       if (!this.onChangeCallback) {
         this.setModel(value);
       }
+      this.modelChange.emit(this.model); // FIX: Emit model change event
     }
     this.onChange.emit({value: value});
   }

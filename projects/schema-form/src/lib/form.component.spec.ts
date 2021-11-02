@@ -1,12 +1,12 @@
 import {Component} from '@angular/core';
 import {FormsModule} from '@angular/forms';
-import {async, ComponentFixture, TestBed} from '@angular/core/testing';
+import {ComponentFixture, TestBed, waitForAsync} from '@angular/core/testing';
 import {By} from '@angular/platform-browser';
 
 import {FormComponent} from './form.component';
 import {SchemaFormModule} from './schema-form.module';
 import {FieldType} from './template-schema/field/field';
-import {ISchema} from './model/ISchema';
+import {ISchema} from './model';
 
 class BaseTest {
   schema: ISchema = {
@@ -71,7 +71,7 @@ describe('FormComponent', () => {
     let component: BaseTest;
 
     beforeEach(
-      async(() => {
+      waitForAsync(() => {
         TestBed.configureTestingModule({
           imports: [FormsModule, SchemaFormModule.forRoot()],
           declarations: [testComponent],
@@ -82,7 +82,7 @@ describe('FormComponent', () => {
 
     describe((!index ? 'Without' : 'With') + ' NgModel', () => {
       beforeEach(
-        async(() => {
+        waitForAsync(() => {
           TestBed.compileComponents();
           fixture = TestBed.createComponent(testComponent);
           fixture.detectChanges();
@@ -140,7 +140,7 @@ describe('FormComponent', () => {
         });
       }
 
-      it('should support 2 way data binding', () => {
+      it('should support 2 way data binding', (done) => {
         const input = fixture.debugElement.query(By.css('input')).nativeElement;
 
         expect(input.value).toBeFalsy();
@@ -159,10 +159,11 @@ describe('FormComponent', () => {
           input.dispatchEvent(new Event('input'));
 
           expect(component.modelA.fieldA).toEqual(value);
-        });
+          done();
+        }, done.fail);
       });
 
-      it('should emit onChange events on field value change', () => {
+      it('should emit onChange events on field value change', (done) => {
         const predicate = By.directive(FormComponent);
         const form = fixture.debugElement.query(predicate).componentInstance;
         spyOn(form.onChange, 'emit');
@@ -176,7 +177,8 @@ describe('FormComponent', () => {
 
           const value = { fieldA: 'CHANGED' };
           expect(form.onChange.emit).toHaveBeenCalledWith({ value });
-        });
+          done();
+        }, done.fail);
       });
     });
   });
