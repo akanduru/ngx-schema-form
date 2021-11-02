@@ -3,7 +3,7 @@
 // ng test --include='**/json-schema-example/*.visibleIf.spec.ts' --watch=true`
 // - - - - - - - - - - - - - - - - - -
 
-import {ComponentFixture, TestBed, async} from '@angular/core/testing';
+import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 import { HttpClientModule } from '@angular/common/http';
 import {
   SchemaFormModule,
@@ -22,7 +22,7 @@ describe('JsonSchemaExampleComponent', () => {
   let component: JsonSchemaExampleComponent;
   let fixture: ComponentFixture<JsonSchemaExampleComponent>;
 
-  beforeEach(async (() => {
+  beforeEach(async(() => {
     TestBed.configureTestingModule({
       imports: [
         SchemaFormModule.forRoot(),
@@ -42,7 +42,7 @@ describe('JsonSchemaExampleComponent', () => {
     .compileComponents();
   }));
 
-  beforeEach(async () => {
+  beforeEach(() => {
     fixture = TestBed.createComponent(JsonSchemaExampleComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -58,7 +58,7 @@ describe('JsonSchemaExampleComponent - canonical-path', () => {
   let component: JsonSchemaExampleComponent;
   let fixture: ComponentFixture<JsonSchemaExampleComponent>;
 
-  beforeEach(async (() => {
+  beforeEach(async(() => {
     TestBed.configureTestingModule({
       imports: [
         SchemaFormModule.forRoot(),
@@ -78,7 +78,7 @@ describe('JsonSchemaExampleComponent - canonical-path', () => {
     .compileComponents();
   }));
 
-  beforeEach(async () => {
+  beforeEach(() => {
     fixture = TestBed.createComponent(JsonSchemaExampleComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
@@ -88,7 +88,7 @@ describe('JsonSchemaExampleComponent - canonical-path', () => {
     expect(component).toBeTruthy();
   });
 */
-  beforeEach(async () => {
+  beforeEach(() => {
 
     // select demo sample
     const select: HTMLSelectElement = fixture.debugElement.query(By.css('#samples')).nativeElement;
@@ -132,7 +132,7 @@ describe('JsonSchemaExampleComponent - canonical-path', () => {
       // check label click checks checkbox
       _test_boolean_checkbox1.nativeElement.checked = false;
       fixture.detectChanges();
-      _test_boolean_checkbox1.nativeElement.click();
+      _test_label_checkbox1.nativeElement.click();
       fixture.detectChanges();
       expect(_test_boolean_checkbox1.nativeElement.checked).toBeTruthy();
 
@@ -160,14 +160,14 @@ describe('JsonSchemaExampleComponent - canonical-path', () => {
       // check label click checks checkbox
       _test_boolean_checkbox1.nativeElement.checked = false;
       fixture.detectChanges();
-      _test_boolean_checkbox1.nativeElement.click();
+      _test_label_checkbox1.nativeElement.click();
       fixture.detectChanges();
       expect(_test_boolean_checkbox1.nativeElement.checked).toBeTruthy();
 
       // check label click checks checkbox
       _test_boolean_checkbox2.nativeElement.checked = false;
       fixture.detectChanges();
-      _test_boolean_checkbox2.nativeElement.click();
+      _test_label_checkbox2.nativeElement.click();
       fixture.detectChanges();
       expect(_test_boolean_checkbox2.nativeElement.checked).toBeTruthy();
 
